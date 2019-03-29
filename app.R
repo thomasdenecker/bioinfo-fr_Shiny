@@ -29,17 +29,12 @@ ui <- dashboardPage(
   dashboardHeader(title = "bioinfo-fr"),
   dashboardSidebar(
     sidebarMenu(id = "tabs",
-      menuItem("Lecture des données", tabName = "readData", icon = icon("readme")),
-      menuItem("Visualisation des données", tabName = "visualization", icon = icon("poll"))
+                menuItem("Lecture des données", tabName = "readData", icon = icon("readme")),
+                menuItem("Visualisation des données", tabName = "visualization", icon = icon("poll"))
     )
   ),
   dashboardBody(
-    tags$head(tags$style(HTML('
-      .content-wrapper{
-        background-color: white !important;
-      }
-    '))),
-              
+    
     tabItems(
       # Read data
       tabItem(tabName = "readData",
@@ -95,12 +90,21 @@ ui <- dashboardPage(
               dataTableOutput('dataTable'),
               h2("Graphiques"),
               fluidRow(
-                column(3, plotOutput("plotAvecR")),
-                column(3, plotOutput("plotAvecGgplot2")),
-                column(3, plotlyOutput("plotAvecPlotly")),
-                column(3, htmlOutput("plotAvecGoogle"))
+                column(4, plotOutput("plotAvecR")),
+                column(4, colourpicker::colourInput("colR", "Couleur graphique R", "black",allowTransparent = T),
+                       sliderInput("cex", "Taille",
+                                   min = 0.5, max = 3,
+                                   value = 1,step = 0.2
+                                  )),
+                column(4, selectInput(inputId = "pch", choices = 1:20, label = "Type de points",selected = 1),
+                       textInput("title", "Titre", "Sepal length vs Petal length (R)") )
+              ),
+              tags$br(), 
+              fluidRow(
+                column(4, plotOutput("plotAvecGgplot2")),
+                column(4, plotlyOutput("plotAvecPlotly")),
+                column(4, htmlOutput("plotAvecGoogle"))
               )
-              
       )
     )
   )
@@ -156,77 +160,95 @@ server <- function(input, output, session) {
   #=============================================================================
   
   output$dataTable = DT::renderDataTable({
-    datatable(data$table, filter = 'top') %>% 
-      formatStyle('Sepal.Length', 
-                  background = styleColorBar(data$table$Sepal.Length, 'lightcoral'),
-                  backgroundSize = '100% 90%',
-                  backgroundRepeat = 'no-repeat',
-                  backgroundPosition = 'center'
-      ) %>%
-      formatStyle(
-        'Sepal.Width',
-        backgroundColor = styleInterval(c(3,4), c('white', 'red', "firebrick")),
-        color = styleInterval(c(3,4), c('black', 'white', "white"))
-      ) %>%
-      formatStyle(
-        'Petal.Length',
-        background = styleColorBar(data$table$Petal.Length, 'lightcoral'),
-        backgroundSize = '100% 90%',
-        backgroundRepeat = 'no-repeat',
-        backgroundPosition = 'center'
-      ) %>%
-      formatStyle(
-        'Petal.Width',
-        backgroundColor = styleInterval(c(1,2), c('white', 'red', "firebrick")),
-        color = styleInterval(c(1,2), c('black', 'white', "white"))
-      ) %>%
-      formatStyle(
-        'Species',
-        backgroundColor = styleEqual(
-          unique(data$table$Species), c('lightblue', 'lightgreen', 'lavender')
+    if(!is.null(data$table)){
+      datatable(data$table, filter = 'top') %>% 
+        formatStyle('Sepal.Length', 
+                    background = styleColorBar(data$table$Sepal.Length, 'lightcoral'),
+                    backgroundSize = '100% 90%',
+                    backgroundRepeat = 'no-repeat',
+                    backgroundPosition = 'center'
+        ) %>%
+        formatStyle(
+          'Sepal.Width',
+          backgroundColor = styleInterval(c(3,4), c('white', 'red', "firebrick")),
+          color = styleInterval(c(3,4), c('black', 'white', "white"))
+        ) %>%
+        formatStyle(
+          'Petal.Length',
+          background = styleColorBar(data$table$Petal.Length, 'lightcoral'),
+          backgroundSize = '100% 90%',
+          backgroundRepeat = 'no-repeat',
+          backgroundPosition = 'center'
+        ) %>%
+        formatStyle(
+          'Petal.Width',
+          backgroundColor = styleInterval(c(1,2), c('white', 'red', "firebrick")),
+          color = styleInterval(c(1,2), c('black', 'white', "white"))
+        ) %>%
+        formatStyle(
+          'Species',
+          backgroundColor = styleEqual(
+            unique(data$table$Species), c('lightblue', 'lightgreen', 'lavender')
+          )
         )
-      )
-    
+    }else {
+      NULL
+    }
   })
   
+  #=============================================================================
+  # Graphiques
+  #=============================================================================
+  # dataTable_tab_rows_selected
   output$plotAvecR <- renderPlot({
-    plot(data$table$Petal.Length,data$table$Sepal.Length, 
-         main = "Sepal length vs Petal length (R)",
-         ylab = "Sepal length",
-         xlab = "Petal length")
+    if(!is.null(data$table) && !is.null(input$dataTable_rows_all)){
+      plot(data$table$Petal.Length[input$dataTable_rows_all],
+           data$table$Sepal.Length[input$dataTable_rows_all], 
+           main = input$title,
+           ylab = "Sepal length",
+           xlab = "Petal length",
+           pch = as.numeric(input$pch),
+           col = input$colR, 
+           cex = input$cex)
+    }else {
+      NULL
+    }
   })
   
   output$plotAvecGgplot2 <- renderPlot({
-    ggplot(data=data$table, aes(x = Sepal.Length, y = Sepal.Width)) + 
-      geom_point(aes(color=Species, shape=Species)) +
-      xlab("Sepal Length") +  ylab("Sepal Width") +
-      ggtitle("Sepal Length-Width (ggplot2)")
+    if(!is.null(data$table)){
+      ggplot(data=data$table[input$dataTable_rows_all,], aes(x = Sepal.Length, y = Sepal.Width)) + 
+        geom_point(aes(color=Species, shape=Species)) +
+        xlab("Sepal Length") +  ylab("Sepal Width") +
+        ggtitle("Sepal Length-Width (ggplot2)")
+    }else {
+      NULL
+    }
   })
   
   output$plotAvecPlotly <- renderPlotly({
     if(!is.null(data$table)){
-      plot_ly(data = data$table, x = ~Petal.Length, y = ~Petal.Width, color = ~Species)%>%
+      plot_ly(data = data$table[input$dataTable_rows_all,], x = ~Petal.Length, y = ~Petal.Width, color = ~Species)%>%
         layout(title = 'Petal Length-Width (ggplot2)',
                yaxis = list(title = "Petal width"),
                xaxis = list(title = "Petal length"))
     }else {
       NULL
     }
-
+    
   })
   
   output$plotAvecGoogle <- renderGvis({
     if(!is.null(data$table)){
-      gvisHistogram(as.data.frame(data$table$Petal.Width),
+      gvisHistogram(as.data.frame(data$table$Petal.Width[input$dataTable_rows_all]),
                     options=list(title ="Petal width (Google)",
                                  height=400)
-                    )
+      )
     }else {
       NULL
     }
     
   })
-  
   
 }
 
