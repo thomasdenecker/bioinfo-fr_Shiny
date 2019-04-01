@@ -18,8 +18,7 @@ library(plotly)
 library(ggplot2)
 library(shinyWidgets)
 library(colourpicker)
-library(shinyjs)
-library(shinycssloaders)
+library(googleVis)
 
 ################################################################################
 # UI
