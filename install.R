@@ -1,0 +1,8 @@
+install.packages("shiny")
+install.packages("shinydashboard")
+install.packages("shinyWidgets")
+install.packages("DT")
+install.packages("plotly")
+install.packages("ggplot2")
+install.packages("googleVis")
+install.packages("colourpicker")
