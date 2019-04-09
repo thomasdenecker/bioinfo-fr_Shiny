@@ -115,7 +115,7 @@ ui <- dashboardPage(
 
 server <- function(input, output, session) {
   
-  data = reactiveValues()
+  data <- reactiveValues()
   
   #=============================================================================
   # Preview
